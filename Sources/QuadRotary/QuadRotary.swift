@@ -99,7 +99,7 @@ public final class QuadRotary {
     }
 
     for encoder in _encoders {
-      if let delta = try? await encoder.asyncDelta, delta != 0 {
+      if let delta = try? await encoder.delta, delta != 0 {
         events.append(Event(index: encoder.index, value: .rotated(delta)))
       }
     }

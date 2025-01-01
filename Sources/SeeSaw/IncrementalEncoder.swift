@@ -52,18 +52,10 @@ public struct IncrementalEncoder {
   }
 
   public var delta: Int32 {
-    get throws {
-      try _seeSaw.getDelta(of: _encoder)
-    }
-  }
-
-  #if canImport(AsyncSwiftIO)
-  public var asyncDelta: Int32 {
     get async throws {
       try await _seeSaw.getDelta(of: _encoder)
     }
   }
-  #endif
 
   public var index: UInt8 {
     _encoder
