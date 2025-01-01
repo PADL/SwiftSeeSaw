@@ -17,6 +17,10 @@ let package = Package(
       targets: ["SeeSawQuadRotary"]
     ),
     .library(
+      name: "SeeSaw",
+      targets: ["SeeSaw"]
+    ),
+    .library(
       name: "QuadRotary",
       targets: ["QuadRotary"]
     ),
