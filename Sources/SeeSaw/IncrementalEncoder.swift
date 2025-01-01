@@ -51,6 +51,10 @@ public struct IncrementalEncoder {
     }
   }
 
+  public func getPosition() async throws -> Int32 {
+    try await _seeSaw.getPosition(of: _encoder)
+  }
+
   public var delta: Int32 {
     get async throws {
       try await _seeSaw.getDelta(of: _encoder)
