@@ -20,13 +20,14 @@ import SystemPackage
 
 @SeeSawActor
 public final class QuadRotary {
-  public enum Mode {
+  public enum Mode: Sendable {
     case poll(Duration)
     case interrupt(Int32)
   }
 
-  public static let NumEncoders = UInt8(4)
-  public static let DefaultPollInterval: Duration = .nanoseconds(UInt64(1_000_000.0 / Float(30)))
+  public nonisolated static let NumEncoders = UInt8(4)
+  public nonisolated static let DefaultPollInterval: Duration =
+    .nanoseconds(UInt64(1_000_000.0 / Float(30)))
 
   public struct Event: Sendable {
     public let index: UInt8

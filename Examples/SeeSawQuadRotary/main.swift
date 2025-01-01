@@ -37,7 +37,22 @@ public actor SeeSawQuadRotary {
       nil
     }
 
-    let seeSaw = try await SeeSawQuadRotary(deviceNumber: deviceNumber) { @Sendable value in
+    let interruptPin: Int32? = if CommandLine.arguments.count > 2 {
+      Int32(CommandLine.arguments[2])!
+    } else {
+      nil
+    }
+
+    let mode: QuadRotary.Mode = if let interruptPin {
+      .interrupt(interruptPin)
+    } else {
+      .poll(QuadRotary.DefaultPollInterval)
+    }
+
+    let seeSaw = try await SeeSawQuadRotary(
+      deviceNumber: deviceNumber,
+      mode: mode
+    ) { @Sendable value in
       debugPrint("Rotary \(value)")
     }
     try await seeSaw.run()
@@ -49,10 +64,11 @@ public actor SeeSawQuadRotary {
 
   init(
     deviceNumber: Int32? = nil,
+    mode: QuadRotary.Mode,
     _ callback: @escaping @Sendable (QuadRotary.Event) -> ()
   ) async throws {
     self.callback = callback
-    quadRotary = try await QuadRotary(deviceNumber: deviceNumber ?? 1)
+    quadRotary = try await QuadRotary(deviceNumber: deviceNumber ?? 1, mode: mode)
   }
 
   @SeeSawActor
