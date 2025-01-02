@@ -48,6 +48,7 @@ public final class QuadRotary {
     public enum Value: Sendable {
       case rotated(Int32)
       case switchPressed
+      case switchReleased
     }
 
     public let value: Value
@@ -114,10 +115,8 @@ public final class QuadRotary {
 
       if let newValue = try? await _switches[i].value, newValue != _switchStates[i] {
         _switchStates[i] = newValue
-        if !newValue {
-          // switch is pressed when value is `false`
-          events.append(.init(index: UInt8(i), value: .switchPressed))
-        }
+        // switch is pressed when value is `false`
+        events.append(.init(index: UInt8(i), value: newValue ? .switchReleased : .switchPressed))
       }
 
       if let newValue = try? await _encoders[i].getPosition(), newValue != _encoderPositions[i] {
