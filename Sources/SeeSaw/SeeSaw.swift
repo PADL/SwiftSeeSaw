@@ -350,21 +350,21 @@ extension SeeSaw {
   }
 
   func read16(base: BaseAddress, reg: UInt8) throws -> UInt16 {
-    var buffer = [UInt8](repeating: 0, count: MemoryLayout<UInt16>.stride)
-    try read(base: base, reg: reg, into: &buffer)
-    return UInt16(bigEndianBytes: buffer)
+    try readN(base: base, reg: reg, type: UInt16.self)
   }
 
   func read32(base: BaseAddress, reg: UInt8) throws -> UInt32 {
-    var buffer = [UInt8](repeating: 0, count: MemoryLayout<UInt32>.stride)
-    try read(base: base, reg: reg, into: &buffer)
-    return UInt32(bigEndianBytes: buffer)
+    try readN(base: base, reg: reg, type: UInt32.self)
   }
 
   func read64(base: BaseAddress, reg: UInt8) throws -> UInt64 {
-    var buffer = [UInt8](repeating: 0, count: MemoryLayout<UInt64>.stride)
+    try readN(base: base, reg: reg, type: UInt64.self)
+  }
+
+  func readN<T: FixedWidthInteger>(base: BaseAddress, reg: UInt8, type: T.Type) throws -> T {
+    var buffer = [UInt8](repeating: 0, count: MemoryLayout<T>.stride)
     try read(base: base, reg: reg, into: &buffer)
-    return UInt64(bigEndianBytes: buffer)
+    return T(bigEndianBytes: buffer)
   }
 
   /// Write an arbitrary I2C register range on the device
@@ -388,6 +388,10 @@ extension SeeSaw {
   }
 
   func write64(base: BaseAddress, reg: UInt8, _ value: UInt64) throws {
+    try write(base: base, reg: reg, value.bigEndianBytes)
+  }
+
+  func writeN(base: BaseAddress, reg: UInt8, _ value: some FixedWidthInteger) throws {
     try write(base: base, reg: reg, value.bigEndianBytes)
   }
 }
@@ -415,23 +419,23 @@ extension SeeSaw {
   }
 
   func read8(base: BaseAddress, reg: UInt8) async throws -> UInt8 {
-    try await write(base: base, reg: reg)
-    return try await asyncI2C.read(1)[0]
+    try await read(base: base, reg: reg, count: 1).first!
   }
 
   func read16(base: BaseAddress, reg: UInt8) async throws -> UInt16 {
-    try await write(base: base, reg: reg)
-    return try await UInt16(bigEndianBytes: asyncI2C.read(MemoryLayout<UInt16>.stride))
+    try await readN(base: base, reg: reg, type: UInt16.self)
   }
 
   func read32(base: BaseAddress, reg: UInt8) async throws -> UInt32 {
-    try await write(base: base, reg: reg)
-    return try await UInt32(bigEndianBytes: asyncI2C.read(MemoryLayout<UInt32>.stride))
+    try await readN(base: base, reg: reg, type: UInt32.self)
   }
 
   func read64(base: BaseAddress, reg: UInt8) async throws -> UInt64 {
-    try await write(base: base, reg: reg)
-    return try await UInt64(bigEndianBytes: asyncI2C.read(MemoryLayout<UInt64>.stride))
+    try await readN(base: base, reg: reg, type: UInt64.self)
+  }
+
+  func readN<T: FixedWidthInteger>(base: BaseAddress, reg: UInt8, type: T.Type) async throws -> T {
+    try await T(bigEndianBytes: read(base: base, reg: reg, count: MemoryLayout<T>.stride))
   }
 
   /// Write an arbitrary I2C register range on the device asynchronously
@@ -447,16 +451,18 @@ extension SeeSaw {
   }
 
   func write16(base: BaseAddress, reg: UInt8, _ value: UInt16) async throws {
-    let buffer = [base.rawValue, reg] + value.bigEndianBytes
-    _ = try await asyncI2C.write(buffer)
+    try await writeN(base: base, reg: reg, value)
   }
 
   func write32(base: BaseAddress, reg: UInt8, _ value: UInt32) async throws {
-    let buffer = [base.rawValue, reg] + value.bigEndianBytes
-    _ = try await asyncI2C.write(buffer)
+    try await writeN(base: base, reg: reg, value)
   }
 
   func write64(base: BaseAddress, reg: UInt8, _ value: UInt64) async throws {
+    try await writeN(base: base, reg: reg, value)
+  }
+
+  func writeN(base: BaseAddress, reg: UInt8, _ value: some FixedWidthInteger) async throws {
     let buffer = [base.rawValue, reg] + value.bigEndianBytes
     _ = try await asyncI2C.write(buffer)
   }
@@ -469,22 +475,34 @@ extension SeeSaw {
 public extension SeeSaw {
   /// Set the mode of a pin by number
   func digitalModeSet(pin: UInt8, mode: Mode) async throws {
-    try await digitalModeSetBulk(pins: 1 << pin, mode: mode)
+    if pin > 32 {
+      try await digitalModeSetBulk(pins: UInt64(1 << pin), mode: mode)
+    } else {
+      try await digitalModeSetBulk(pins: UInt32(1 << pin), mode: mode)
+    }
   }
 
   /// Set the value of an output pin by number
   func digitalWrite(pin: UInt8, value: Bool) async throws {
-    try await digitalWriteBulk(pins: 1 << pin, value: value)
+    if pin > 32 {
+      try await digitalWriteBulk(pins: UInt64(1 << pin), value: value)
+    } else {
+      try await digitalWriteBulk(pins: UInt32(1 << pin), value: value)
+    }
   }
 
   /// Get the value of an input pin by number
   func digitalRead(pin: UInt8) async throws -> Bool {
-    try await digitalReadBulk(pins: 1 << pin) != 0
+    if pin > 32 {
+      try await digitalReadBulk(pins: UInt64(1 << pin)) != 0
+    } else {
+      try await digitalReadBulk(pins: UInt32(1 << pin)) != 0
+    }
   }
 
   /// Get the value of pins as a bitmask
-  func digitalReadBulk(pins: UInt64) async throws -> UInt64 {
-    let value = try await read64(base: .gpio, reg: GPIOCommand.bulk.rawValue)
+  func digitalReadBulk<T: FixedWidthInteger>(pins: T) async throws -> T {
+    let value: T = try await readN(base: .gpio, reg: GPIOCommand.bulk.rawValue, type: T.self)
     return value & pins
   }
 
@@ -541,7 +559,7 @@ public extension SeeSaw {
   }
 
   /// Set the mode of all the pins as a bitmask
-  func digitalModeSetBulk(pins: UInt64, mode: Mode) async throws {
+  func digitalModeSetBulk(pins: any FixedWidthInteger, mode: Mode) async throws {
     let cmd = pins.bigEndianBytes
 
     try await write(base: .gpio, reg: GPIOCommand.dirSetBulk.rawValue, cmd)
@@ -564,7 +582,7 @@ public extension SeeSaw {
   }
 
   /// Set the value of pins as a bitmask
-  func digitalWriteBulk(pins: UInt64, value: Bool) async throws {
+  func digitalWriteBulk(pins: any FixedWidthInteger, value: Bool) async throws {
     let cmd = pins.bigEndianBytes
     if value {
       try await write(base: .gpio, reg: GPIOCommand.bulkSet.rawValue, cmd)
