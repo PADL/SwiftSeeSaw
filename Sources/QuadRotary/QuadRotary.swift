@@ -53,6 +53,7 @@ public final class QuadRotary {
     public let value: Value
   }
 
+  private let _mask: UInt8
   private let _mode: Mode
   private let _eventChannel = AsyncThrowingChannel<Event, Error>()
   private var _task: Task<(), Error>?
@@ -68,10 +69,12 @@ public final class QuadRotary {
 
   public init(
     deviceNumber: Int32 = 1,
+    mask: UInt8 = 0xF,
     mode: Mode = Mode.poll(DefaultPollInterval)
   ) async throws {
     let i2c = I2C(Id(rawValue: deviceNumber))
     let seeSaw = try await SeeSaw(i2c: i2c)
+    _mask = mask
     _mode = mode
     switch _mode {
     case .poll:
@@ -107,6 +110,8 @@ public final class QuadRotary {
     var events = [Event]()
 
     for i in 0..<Int(QuadRotary.NumEncoders) {
+      guard _mask & (1 << i) != 0 else { continue }
+
       if let newValue = try? await _switches[i].value, newValue != _switchStates[i] {
         _switchStates[i] = newValue
         events.append(Event(index: UInt8(i), value: .switched(newValue)))
