@@ -72,7 +72,7 @@ public actor SeeSawActor {
 }
 
 @SeeSawActor
-public final class SeeSaw {
+public final class SeeSaw: CustomStringConvertible {
   public struct PinMap: Sendable {
     public var analogPins: [UInt8]
     public var pwmWidth: UInt8
@@ -208,8 +208,8 @@ public final class SeeSaw {
   private let asyncI2C: AsyncI2C
   #endif
   private let address: UInt8
-  private var pinMapping: PinMap?
   private var chipID: ChipID!
+  private var pinMapping: PinMap?
 
   public init(i2c: I2C, address: UInt8 = 0x49, reset: Bool = true) async throws {
     self.i2c = i2c
@@ -221,7 +221,7 @@ public final class SeeSaw {
     )
     #endif
     self.address = address
-    chipID = try _getChipID()
+    chipID = try await _getChipID()
 
     if reset {
       try await swReset()
@@ -240,15 +240,19 @@ public final class SeeSaw {
     } else {
       if chipID == .samD09 {
         pinMapping = SAMD09_Pinmap
-      } else if chipID == .atTiny816 || chipID == .atTiny806 || chipID == .atTiny1616 {
+      } else if chipID == .atTiny817 || chipID == .atTiny807 || chipID == .atTiny1617 {
         pinMapping = ATtiny8x7_Pinmap
       }
     }
   }
 
-  private func _getChipID() throws -> ChipID {
+  public nonisolated var description: String {
+    "\(type(of: self))(address: \(address))"
+  }
+
+  private func _getChipID() async throws -> ChipID {
     guard let chipID =
-      try ChipID(rawValue: read8(base: .status, reg: StatusCommand.hwID.rawValue))
+      try await ChipID(rawValue: read8(base: .status, reg: StatusCommand.hwID.rawValue))
     else {
       throw SeeSawError.unknownChipID
     }
@@ -283,7 +287,7 @@ public final class SeeSaw {
 
   /// Return the EEPROM address used to store I2C address
   private func _getEepromI2CAddr() throws -> UInt8 {
-    switch chipID {
+    switch chipID! {
     case .atTiny806:
       fallthrough
     case .atTiny807:
@@ -298,8 +302,6 @@ public final class SeeSaw {
       return 0xFF
     case .samD09:
       return 0x3F
-    case .none:
-      throw SeeSawError.unknownChipID
     }
   }
 
