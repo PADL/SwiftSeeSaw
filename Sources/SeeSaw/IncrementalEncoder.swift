@@ -39,20 +39,14 @@ public struct IncrementalEncoder {
     _encoder = encoder
   }
 
-  public var position: Int32? {
-    get {
-      try? _seeSaw.getPosition(of: _encoder)
-    }
-
-    set {
-      if let newValue {
-        try? _seeSaw.setPosition(of: _encoder, to: newValue)
-      }
+  public var position: Int32 {
+    get async throws {
+      try await _seeSaw.getPosition(of: _encoder)
     }
   }
 
-  public func getPosition() async throws -> Int32 {
-    try await _seeSaw.getPosition(of: _encoder)
+  public func set(position: Int32) async throws {
+    try await _seeSaw.setPosition(of: _encoder, to: position)
   }
 
   public var delta: Int32 {
