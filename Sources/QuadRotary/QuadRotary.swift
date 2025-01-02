@@ -60,7 +60,7 @@ public final class QuadRotary {
   private var _task: Task<(), Error>?
   private let _interrupt: DigitalIn.EdgeInterruptStream!
   private let _encoders: [IncrementalEncoder]
-  private var _encoderPositions = [Int32](repeating: 0, count: Int(QuadRotary.NumEncoders))
+//  private var _encoderPositions = [Int32](repeating: 0, count: Int(QuadRotary.NumEncoders))
   private let _switches: [DigitalIO]
   private var _switchStates = [Bool](repeating: true, count: Int(QuadRotary.NumEncoders))
 
@@ -82,7 +82,7 @@ public final class QuadRotary {
       _interrupt = nil
     case let .interrupt(pin):
       for i in 0..<QuadRotary.NumEncoders {
-        try seeSaw.enableInterrupt(encoder: UInt8(i))
+        try seeSaw.enableInterrupt(encoder: i)
       }
       _interrupt = DigitalIn(Id(rawValue: pin), mode: .pullDown)
         .risingEdgeInterrupts
@@ -119,9 +119,7 @@ public final class QuadRotary {
         events.append(.init(index: UInt8(i), value: newValue ? .switchReleased : .switchPressed))
       }
 
-      if let newValue = try? await _encoders[i].getPosition(), newValue != _encoderPositions[i] {
-        let delta = newValue - _encoderPositions[i]
-        _encoderPositions[i] = newValue
+      if let delta = try? await _encoders[i].delta, delta != 0 {
         events.append(.init(index: UInt8(i), value: .rotated(delta)))
       }
     }
