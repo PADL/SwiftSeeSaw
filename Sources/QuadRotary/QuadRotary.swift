@@ -79,6 +79,9 @@ public final class QuadRotary {
     _mode = mode
     switch _mode {
     case .poll:
+      for i in 0..<QuadRotary.NumEncoders {
+        try seeSaw.disableInterrupt(encoder: i)
+      }
       _interrupt = nil
     case let .interrupt(pin):
       for i in 0..<QuadRotary.NumEncoders {
