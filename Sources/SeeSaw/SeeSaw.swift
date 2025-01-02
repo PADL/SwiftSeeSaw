@@ -397,14 +397,19 @@ extension SeeSaw {
 extension SeeSaw {
   /// Read an arbitrary I2C register range on the device asynchronously
   func read(base: BaseAddress, reg: UInt8, count: Int) async throws -> [UInt8] {
+#if false
     var block = [UInt8](unsafeUninitializedCapacity: count) { buffer,
       initializedCount in
       buffer[0] = reg
-      initializedCount = count
+      initializedCount = 1
     }
 
     try await asyncI2C.writeRead(&block, writeCount: 1, readCount: count)
     return block
+#else
+  try await write(base: base, reg: reg)
+  return try await asyncI2C.read(count)
+#endif
   }
 
   func read8(base: BaseAddress, reg: UInt8) async throws -> UInt8 {
