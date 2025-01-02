@@ -47,7 +47,7 @@ public final class QuadRotary {
 
     public enum Value: Sendable {
       case rotated(Int32)
-      case switched(Bool)
+      case switchPressed
     }
 
     public let value: Value
@@ -61,7 +61,7 @@ public final class QuadRotary {
   private let _encoders: [IncrementalEncoder]
   private var _encoderPositions = [Int32](repeating: 0, count: Int(QuadRotary.NumEncoders))
   private let _switches: [DigitalIO]
-  private var _switchStates = [Bool](repeating: false, count: Int(QuadRotary.NumEncoders))
+  private var _switchStates = [Bool](repeating: true, count: Int(QuadRotary.NumEncoders))
 
   public var events: AnyAsyncSequence<Event> {
     _eventChannel.eraseToAnyAsyncSequence()
@@ -114,13 +114,16 @@ public final class QuadRotary {
 
       if let newValue = try? await _switches[i].value, newValue != _switchStates[i] {
         _switchStates[i] = newValue
-        events.append(Event(index: UInt8(i), value: .switched(newValue)))
+        if !newValue {
+          // switch is pressed when value is `false`
+          events.append(.init(index: UInt8(i), value: .switchPressed))
+        }
       }
 
       if let newValue = try? await _encoders[i].getPosition(), newValue != _encoderPositions[i] {
         let delta = newValue - _encoderPositions[i]
         _encoderPositions[i] = newValue
-        events.append(Event(index: UInt8(i), value: .rotated(delta)))
+        events.append(.init(index: UInt8(i), value: .rotated(delta)))
       }
     }
 
