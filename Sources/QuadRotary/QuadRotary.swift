@@ -98,7 +98,7 @@ public final class QuadRotary {
       DigitalIO(seeSaw: seeSaw, pin: 12),
       DigitalIO(seeSaw: seeSaw, pin: 14),
       DigitalIO(seeSaw: seeSaw, pin: 17),
-      DigitalIO(seeSaw: seeSaw, pin: 19),
+      DigitalIO(seeSaw: seeSaw, pin: 9),
     ]
 
     for var aSwitch in switches {
