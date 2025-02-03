@@ -37,7 +37,7 @@ public final class QuadRotary {
 
   public nonisolated static let NumEncoders = UInt8(4)
   public nonisolated static let DefaultPollInterval: Duration =
-    .nanoseconds(UInt64(1_000_000.0 / Float(30)))
+    .nanoseconds(UInt64(1_000_000_000.0 / Float(30)))
 
   public struct Event: Sendable {
     public let index: UInt8
