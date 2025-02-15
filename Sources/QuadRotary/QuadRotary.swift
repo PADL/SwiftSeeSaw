@@ -30,9 +30,10 @@ import SwiftIO
 
 @SeeSawActor
 public final class QuadRotary {
-  public enum Mode: Sendable {
+  public enum Mode: Sendable, Equatable {
     case poll(Duration)
     case interrupt(Int32)
+    case manual
   }
 
   public nonisolated static let NumEncoders = UInt8(4)
@@ -86,6 +87,8 @@ public final class QuadRotary {
       }
       _interrupt = DigitalIn(Id(rawValue: pin), mode: .pullDown)
         .risingEdgeInterrupts
+    case .manual:
+      _interrupt = nil
     }
 
     var encoders = [IncrementalEncoder]()
@@ -134,6 +137,8 @@ public final class QuadRotary {
   }
 
   public func run() {
+    guard _mode != .manual else { return }
+
     _task = Task<(), Error> { @Sendable [self] in
       switch _mode {
       case let .poll(pollInterval):
@@ -145,6 +150,8 @@ public final class QuadRotary {
         for try await _ in _interrupt! {
           await _sendEvents()
         }
+      case .manual:
+        break
       }
     }
   }
