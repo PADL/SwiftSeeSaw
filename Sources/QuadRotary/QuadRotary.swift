@@ -54,7 +54,6 @@ public final class QuadRotary {
 
   private let _mask: UInt8
   private let _mode: Mode
-  private let _eventChannel = AsyncThrowingChannel<Event, Error>()
   private var _task: Task<(), Error>?
   private let _interrupt: DigitalIn.EdgeInterruptStream!
   private let _encoders: [IncrementalEncoder]
@@ -63,7 +62,7 @@ public final class QuadRotary {
   private var _switchStates = [Bool](repeating: true, count: Int(QuadRotary.NumEncoders))
 
   public var events: AnyAsyncSequence<Event> {
-    _eventChannel.eraseToAnyAsyncSequence()
+    _events.eraseToAnyAsyncSequence()
   }
 
   public init(
@@ -73,20 +72,23 @@ public final class QuadRotary {
   ) async throws {
     let i2c = I2C(Id(rawValue: deviceNumber))
     let seeSaw = try await SeeSaw(i2c: i2c)
+    let switchPins = [12, 14, 17, 9]
     _mask = mask
     _mode = mode
     switch _mode {
     case .poll:
       for i in 0..<QuadRotary.NumEncoders {
         try seeSaw.disableInterrupt(encoder: i)
+        try await seeSaw.setGPIOInterrupts(pins: 1 << switchPins[Int(i)], enabled: false)
       }
       _interrupt = nil
     case let .interrupt(pin):
       for i in 0..<QuadRotary.NumEncoders {
         try seeSaw.enableInterrupt(encoder: i)
+        try await seeSaw.setGPIOInterrupts(pins: 1 << switchPins[Int(i)], enabled: true)
       }
-      _interrupt = DigitalIn(Id(rawValue: pin), mode: .pullDown)
-        .risingEdgeInterrupts
+      _interrupt = DigitalIn(Id(rawValue: pin), mode: .pullUp)
+        .fallingEdgeInterrupts
     case .manual:
       _interrupt = nil
     }
