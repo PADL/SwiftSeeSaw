@@ -54,6 +54,7 @@ public final class QuadRotary {
 
   private let _mask: UInt8
   private let _mode: Mode
+  private let _eventChannel = AsyncThrowingChannel<Event, Error>()
   private var _task: Task<(), Error>?
   private let _interrupt: DigitalIn.EdgeInterruptStream!
   private let _encoders: [IncrementalEncoder]
@@ -62,7 +63,7 @@ public final class QuadRotary {
   private var _switchStates = [Bool](repeating: true, count: Int(QuadRotary.NumEncoders))
 
   public var events: AnyAsyncSequence<Event> {
-    _events.eraseToAnyAsyncSequence()
+    _eventChannel.eraseToAnyAsyncSequence()
   }
 
   public init(
